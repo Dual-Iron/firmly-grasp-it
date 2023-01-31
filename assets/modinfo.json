@@ -1,9 +1,9 @@
 ﻿{
-  "id": "testmod",
-  "name": "Test Mod",
-  "version": "0.1.0",
-  "authors": "Author",
-  "description": "Put a neat description here",
+  "id": "firmly-grasp-it",
+  "name": "Firmly Grasp It",
+  "version": "1.0.0",
+  "authors": "Dual",
+  "description": "Lets animals climb spears stuck in walls",
   "requirements": [],
   "requirements_names": [],
   "checksum_override_version": false
