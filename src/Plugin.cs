@@ -14,19 +14,6 @@ using static AItile;
 
 namespace FirmGrasp;
 
-struct MovementConnectionComparer : IEqualityComparer<MovementConnection>
-{
-    public bool Equals(MovementConnection x, MovementConnection y)
-    {
-        return x.type == y.type && x.startCoord == y.startCoord && x.destinationCoord == y.destinationCoord;
-    }
-
-    public int GetHashCode(MovementConnection obj)
-    {
-        return obj.type.GetHashCode() ^ obj.startCoord.GetHashCode() ^ obj.destinationCoord.GetHashCode();
-    }
-}
-
 [BepInPlugin("com.dual.firmly-grasp-it", "Firmly Grasp It", "1.0.0")]
 sealed class Plugin : BaseUnityPlugin
 {
@@ -77,36 +64,18 @@ sealed class Plugin : BaseUnityPlugin
         // This method mimics AImapper.Update at specific tiles
 
         foreach (var tile in tiles) {
+            // Set tiles' accessibility and walkability. Don't need to set fall risk or terrain proximity because adding/removing poles cannot affect that stuff.
             SetAccessibility(room, tile);
-
-            // Don't need to set fall risk because poles are not solid anyway and don't count for/against fall risk
-            // SetFallRisk
-
-            // Don't need to set terrain proximity because adding/removing poles doesn't affect any solid terrain
-            // SetTerrainProximity
         }
 
         // Have to recalculate entire room's movement connection list, because of stuff like reaching over gaps or falling onto beams that can affect many tiles
-
-        for (int y = 0; y < room.TileHeight; y++) {
-            for (int x = 0; x < room.TileWidth; x++) {
-                room.aimap.map[x, y].outgoingPaths.Clear();
-                room.aimap.map[x, y].incomingPaths.Clear();
-            }
-        }
-        for (int y = 0; y < room.TileHeight; y++) {
-            for (int x = 0; x < room.TileWidth; x++) {
-                SetPassages(room, new(x, y));
-            }
-        }
+        RedoConnections(room);
 
         // Have to recalculate the entire room's dijkstra unfortunately.
         RedoDijkstra(room);
 
         // Also start recalculating paths for every critter in the room.
-        UpdatePathfinders(room);
-
-        Logger.LogInfo("Updated AI maps in room!");
+        RedoPathfinders(room);
     }
 
     private static void SetAccessibility(Room room, IntVector2 pos)
@@ -124,8 +93,8 @@ sealed class Plugin : BaseUnityPlugin
         }
 
         Accessibility accessibility = Accessibility.Air;
-        if (room.GetTile(x, y - 1).Terrain == Room.Tile.TerrainType.Solid || room.GetTile(x, y - 1).Terrain == Room.Tile.TerrainType.Floor 
-            || (room.GetTile(x - 1, y - 1).Terrain == Room.Tile.TerrainType.Solid && room.GetTile(x - 1, y).Terrain != Room.Tile.TerrainType.Solid) 
+        if (room.GetTile(x, y - 1).Terrain == Room.Tile.TerrainType.Solid || room.GetTile(x, y - 1).Terrain == Room.Tile.TerrainType.Floor
+            || (room.GetTile(x - 1, y - 1).Terrain == Room.Tile.TerrainType.Solid && room.GetTile(x - 1, y).Terrain != Room.Tile.TerrainType.Solid)
             || (room.GetTile(x + 1, y - 1).Terrain == Room.Tile.TerrainType.Solid && room.GetTile(x + 1, y).Terrain != Room.Tile.TerrainType.Solid)) {
             accessibility = Accessibility.Floor;
         }
@@ -135,8 +104,8 @@ sealed class Plugin : BaseUnityPlugin
         else if (tile.verticalBeam || tile.horizontalBeam) {
             accessibility = Accessibility.Climb;
         }
-        else if (tile.wallbehind || room.GetTile(x - 1, y).Terrain == Room.Tile.TerrainType.Solid || room.GetTile(x + 1, y).Terrain == Room.Tile.TerrainType.Solid 
-            || (room.GetTile(x - 1, y + 1).Terrain == Room.Tile.TerrainType.Solid && room.GetTile(x, y + 1).Terrain != Room.Tile.TerrainType.Solid) 
+        else if (tile.wallbehind || room.GetTile(x - 1, y).Terrain == Room.Tile.TerrainType.Solid || room.GetTile(x + 1, y).Terrain == Room.Tile.TerrainType.Solid
+            || (room.GetTile(x - 1, y + 1).Terrain == Room.Tile.TerrainType.Solid && room.GetTile(x, y + 1).Terrain != Room.Tile.TerrainType.Solid)
             || (room.GetTile(x + 1, y + 1).Terrain == Room.Tile.TerrainType.Solid && room.GetTile(x, y + 1).Terrain != Room.Tile.TerrainType.Solid)) {
             accessibility = Accessibility.Wall;
         }
@@ -148,7 +117,22 @@ sealed class Plugin : BaseUnityPlugin
         map.map[x, y].walkable = accessibility != Accessibility.Air && accessibility != Accessibility.Solid;
     }
 
-    private static void SetPassages(Room room, IntVector2 pos)
+    private static void RedoConnections(Room room)
+    {
+        for (int y = 0; y < room.TileHeight; y++) {
+            for (int x = 0; x < room.TileWidth; x++) {
+                room.aimap.map[x, y].outgoingPaths.Clear();
+                room.aimap.map[x, y].incomingPaths.Clear();
+            }
+        }
+        for (int y = 0; y < room.TileHeight; y++) {
+            for (int x = 0; x < room.TileWidth; x++) {
+                SetConnections(room, new(x, y));
+            }
+        }
+    }
+
+    private static void SetConnections(Room room, IntVector2 pos)
     {
         // Copy from AImapper.FindPassagesOfCurrentTile()
         // Not a clue how this works.
@@ -298,7 +282,7 @@ sealed class Plugin : BaseUnityPlugin
         }
     }
 
-    private static void UpdatePathfinders(Room room)
+    private static void RedoPathfinders(Room room)
     {
         foreach (var crit in room.abstractRoom.creatures) {
             var pf = crit.abstractAI?.RealAI?.pathFinder;
