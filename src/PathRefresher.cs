@@ -46,12 +46,11 @@ sealed class PathRefresher : UpdatableAndDeletable
     {
         string name = room.abstractRoom.name;
 
-        logger.LogDebug($"({name}) Recalculating paths"); // TODO: debug what is causing this lag spike
+        logger.LogDebug($"({name}) Recalculating paths");
 
         Stopwatch sw = Stopwatch.StartNew();
 
-        // This method mimics AImapper.Update, then updates pathfinder state.
-        // Each 'yield return' is a new update. Stopping/starting stopwatch to prevent counting time between updates.
+        // This method mimics AImapper and AIdataPreprocessor, then re-initializes each realized creature's pathfinding in the room. Each 'yield return' defines a new update.
 
         // Set tiles' accessibility and walkability. Don't need to set fall risk or terrain proximity because adding/removing poles cannot affect that stuff.
         foreach (var tile in tiles) {
