@@ -1,12 +1,9 @@
-﻿global using System;
-global using System.Linq;
-global using System.Text;
-global using System.Collections.Generic;
-global using UnityEngine;
-
-using BepInEx;
-using System.Security.Permissions;
+﻿using BepInEx;
 using RWCustom;
+using System;
+using System.Collections.Generic;
+using System.Security.Permissions;
+using UnityEngine;
 using static AItile;
 using static MovementConnection;
 
@@ -117,7 +114,7 @@ sealed class Plugin : BaseUnityPlugin
         }
 
         map.map[x, y].acc = accessibility;
-        map.map[x, y].walkable = accessibility != Accessibility.Air && accessibility != Accessibility.Solid;
+        map.map[x, y].walkable = accessibility is not Accessibility.Air and not Accessibility.Solid;
     }
 
     private static void RedoConnections(Room room)
