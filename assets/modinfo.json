@@ -6,5 +6,6 @@
   "description": "Lets animals climb spears stuck in walls. Help out your friends and foes!<LINE><LINE>Code at github.com/Dual-Iron/firmly-grasp-it",
   "requirements": [],
   "requirements_names": [],
+  "tags": [ "Creatures", "Game Mechanics" ],
   "checksum_override_version": false
 }
